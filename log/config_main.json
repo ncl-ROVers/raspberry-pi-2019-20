@@ -1,0 +1,72 @@
+{
+    "version":1,
+    "formatters":{
+        "console":{
+            "format":"%(asctime)s %(levelname)s %(message)s",
+            "datefmt":"%y-%m-%d %H:%M:%S"
+        },
+        "basic":{
+            "format":"%(asctime)s %(levelname)s %(message)s",
+            "datefmt":"%y-%m-%d %H:%M:%S"
+        },
+        "verbose":{
+            "format":"{asctime} {levelname:8} | {processName:>10} {process:8} | {filename:30} {function:12} {lineno:5} | {message}",
+            "datefmt":"%y-%m-%d %H:%M:%S",
+            "style":"{"
+        }
+    },
+    "handlers":{
+        "console":{
+            "class":"logging.StreamHandler",
+            "level":"INFO",
+            "formatter":"console",
+            "stream":"ext://sys.stdout"
+        },
+        "debug":{
+            "class":"log.restricted_file_handler._RestrictedFileHandler",
+            "level":"DEBUG",
+            "formatter":"basic",
+            "encoding":"utf8",
+            "filename":"debug.log"
+        },
+        "info":{
+            "class":"log.restricted_file_handler._RestrictedFileHandler",
+            "level":"INFO",
+            "formatter":"basic",
+            "encoding":"utf8",
+            "filename":"info.log"
+        },
+        "warning":{
+            "class":"log.restricted_file_handler._RestrictedFileHandler",
+            "level":"WARNING",
+            "formatter":"basic",
+            "encoding":"utf8",
+            "filename":"warning.log"
+        },
+        "error":{
+            "class":"log.restricted_file_handler._RestrictedFileHandler",
+            "level":"ERROR",
+            "formatter":"basic",
+            "encoding":"utf8",
+            "filename":"error.log"
+        },
+        "verbose":{
+            "class":"log.verbose_file_handler._VerboseFileHandler",
+            "level":"DEBUG",
+            "formatter":"verbose",
+            "encoding":"utf8",
+            "filename":"verbose.log"
+        }
+    },
+    "root":{
+        "level":"DEBUG",
+        "handlers":[
+            "console",
+            "debug",
+            "info",
+            "warning",
+            "error",
+            "verbose"
+        ]
+    }
+}
