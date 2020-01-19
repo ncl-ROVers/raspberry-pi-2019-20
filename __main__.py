@@ -1,9 +1,15 @@
 """
 TODO: Document
 """
-from src import DataManager, Device
+from src import *
+from time import sleep
 
 if __name__ == '__main__':
     dm = DataManager()
-    dm.set(Device.ARDUINO_A, test=0)
-    print(dm.get(Device.SURFACE))
+    server = Server(dm)
+    while True:
+        process = server.accept()
+        while server.is_surface_connected:
+            print("still alive...")
+            sleep(1)
+        server.cleanup()
