@@ -8,6 +8,8 @@ import enum as _enum
 ROOT_DIR = _os.path.normpath(_os.path.join(_os.path.dirname(__file__), ".."))
 SRC_DIR = _os.path.join(ROOT_DIR, "src")
 LOG_DIR = _os.path.join(ROOT_DIR, "log")
+TESTS_DIR = _os.path.join(ROOT_DIR, "tests")
+TESTS_ASSETS_DIR = _os.path.join(TESTS_DIR, "assets")
 
 # Declare constant for slowly changing up all values and keys affected
 RAMP_RATE = 2
@@ -28,7 +30,7 @@ class Device(_enum.Enum):
     TODO: Document
     """
     SURFACE = 0
-    ARDUINO_A = 0
+    ARDUINO_A = 1
 
 
 # Declare the transmission sets with the default values as initial values
