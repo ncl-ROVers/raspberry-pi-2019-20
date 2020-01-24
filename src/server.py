@@ -8,7 +8,63 @@ import socket as _socket
 import json as _json
 import multiprocessing as _mp
 import typing as _typing
+import serial as _serial
 from . import data_manager as _dm, Log as _Log
+from .utils import Device as _Device, ARDUINO_PORTS as _ARDUINO_PORTS, \
+    SERIAL_READ_TIMEOUT as _SERIAL_READ_TIMEOUT, SERIAL_WRITE_TIMEOUT as _SERIAL_WRITE_TIMEOUT
+
+
+class _Arduino:
+
+    def __init__(self, dm: _dm.DataManager, port: str):
+        """
+        TODO: Document
+        """
+        self._dm = dm
+        self._port = port
+        self._process = self._new_process()
+
+        # Setup the PySerial structure
+        self._serial = _serial.Serial(baudrate=115200)
+        self._serial.port = self._port
+        self._serial.write_timeout = _SERIAL_WRITE_TIMEOUT
+        self._serial.timeout = _SERIAL_READ_TIMEOUT
+
+    @property
+    def connected(self):
+        """
+        TODO: Document
+        """
+        return self._process.is_alive()
+
+    def connect(self):
+        """
+        TODO: Document
+        """
+        pass
+
+    def disconnect(self):
+        """
+        TODO: Document
+        """
+        pass
+
+    def reconnect(self):
+        """
+        TODO: Document
+        """
+
+    def _communicate(self):
+        """
+        TODO: Document
+        """
+        pass
+
+    def _new_process(self) -> _mp.Process:
+        """
+        TODO: Document
+        """
+        return _mp.Process(target=self._communicate)
 
 
 class Server:
@@ -35,8 +91,8 @@ class Server:
         self._client_socket: _typing.Union[None, _socket.socket] = None
         self._client_address: _typing.Union[None, _typing.Tuple] = None
 
-        # --= Set up communication with Arduino-s =--
-        # TODO
+        # Set up communication with Arduino-s
+        self._arduinos = {self._new_arduino(port) for port in _ARDUINO_PORTS}
 
     @property
     def is_surface_connected(self) -> bool:
@@ -44,6 +100,13 @@ class Server:
         TODO: Document
         """
         return self._process.is_alive()
+
+    @property
+    def arduinos(self) -> set:
+        """
+        TODO: Document
+        """
+        return self._arduinos
 
     def accept(self):
         """
@@ -68,7 +131,7 @@ class Server:
         TODO: Document
         """
         try:
-            self._dm.set(_dm.Device.SURFACE, set_default=True)
+            self._dm.set(_Device.SURFACE, set_default=True)
             if self._process.is_alive():
                 self._process.terminate()
             self._process = self._new_process()
@@ -101,11 +164,11 @@ class Server:
 
                 # Only handle valid, non-empty data
                 if data and isinstance(data, dict):
-                    self._dm.set(_dm.Device.SURFACE, **data)
+                    self._dm.set(_Device.SURFACE, **data)
 
                 # Encode the transmission data as JSON and send the bytes to the server
                 _Log.debug("Sending data to surface")
-                self._client_socket.sendall(bytes(_json.dumps(self._dm.get(_dm.Device.SURFACE)), encoding="utf-8"))
+                self._client_socket.sendall(bytes(_json.dumps(self._dm.get(_Device.SURFACE)), encoding="utf-8"))
 
             except (ConnectionError, OSError) as e:
                 _Log.error(f"An error occurred while communicating with the client - {e}")
@@ -130,3 +193,9 @@ class Server:
         TODO: Document
         """
         return _mp.Process(target=self._communicate)
+
+    def _new_arduino(self, port: str) -> _Arduino:
+        """
+        TODO: Document
+        """
+        return _Arduino(self._dm, port)

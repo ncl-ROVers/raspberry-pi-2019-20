@@ -11,6 +11,11 @@ LOG_DIR = _os.path.join(ROOT_DIR, "log")
 TESTS_DIR = _os.path.join(ROOT_DIR, "tests")
 TESTS_ASSETS_DIR = _os.path.join(TESTS_DIR, "assets")
 
+# Declare Arduino-related constants
+ARDUINO_PORTS = {"/dev/ttyACM0", "/dev/ttyACM1", "/dev/ttyACM2"}
+SERIAL_WRITE_TIMEOUT = 1
+SERIAL_READ_TIMEOUT = 1
+
 # Declare constant for slowly changing up all values and keys affected
 RAMP_RATE = 2
 RAMP_KEYS = {
