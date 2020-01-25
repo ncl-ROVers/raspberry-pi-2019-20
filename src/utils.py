@@ -16,6 +16,9 @@ ARDUINO_PORTS = {"/dev/ttyACM0", "/dev/ttyACM1", "/dev/ttyACM2"}
 SERIAL_WRITE_TIMEOUT = 1
 SERIAL_READ_TIMEOUT = 1
 
+# Declare the constant to determine how often should the connections be checked
+CONNECTION_CHECK_DELAY = 1
+
 # Declare constant for slowly changing up all values and keys affected
 RAMP_RATE = 2
 RAMP_KEYS = {

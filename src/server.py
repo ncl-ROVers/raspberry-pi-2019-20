@@ -14,7 +14,7 @@ from .utils import Device as _Device, ARDUINO_PORTS as _ARDUINO_PORTS, \
     SERIAL_READ_TIMEOUT as _SERIAL_READ_TIMEOUT, SERIAL_WRITE_TIMEOUT as _SERIAL_WRITE_TIMEOUT
 
 
-class _Arduino:
+class Arduino:
 
     def __init__(self, dm: _dm.DataManager, port: str):
         """
@@ -41,24 +41,45 @@ class _Arduino:
         """
         TODO: Document
         """
-        pass
+        _Log.info(f"Connecting to {self._port}...")
+        while True:
+            try:
+                self._serial.open()
+            except _serial.SerialException:
+                continue
+        self._process.start()
+        _Log.info(f"Connected to {self._port}")
 
     def disconnect(self):
         """
         TODO: Document
         """
-        pass
+        if not self.connected:
+            _Log.error(f"Can't disconnect from {self._port} - not connected")
+
+        try:
+            self._serial.close()
+        except _serial.SerialException as e:
+            _Log.error(f"Failed to close the connection with {self._port}")
+
+        if self._process.is_alive():
+            self._process.terminate()
+        self._process = self._new_process()
 
     def reconnect(self):
         """
         TODO: Document
         """
+        self.disconnect()
+        self.connect()
 
     def _communicate(self):
         """
         TODO: Document
+        TODO: Write code for this + serialisation methods for each ID
         """
-        pass
+        data = self._serial.read_until()
+        _Log.debug(f"Received data from {self._port} - {data}")
 
     def _new_process(self) -> _mp.Process:
         """
@@ -102,7 +123,7 @@ class Server:
         return self._process.is_alive()
 
     @property
-    def arduinos(self) -> set:
+    def arduinos(self) -> _typing.Set[Arduino]:
         """
         TODO: Document
         """
@@ -194,8 +215,8 @@ class Server:
         """
         return _mp.Process(target=self._communicate)
 
-    def _new_arduino(self, port: str) -> _Arduino:
+    def _new_arduino(self, port: str) -> Arduino:
         """
         TODO: Document
         """
-        return _Arduino(self._dm, port)
+        return Arduino(self._dm, port)

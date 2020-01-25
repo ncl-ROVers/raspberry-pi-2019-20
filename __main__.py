@@ -2,14 +2,35 @@
 TODO: Document
 """
 from src import *
-from time import sleep
+import threading
+import time
+
+
+def _handle_surface(s: Server):
+    """
+    TODO: Document
+    """
+    while True:
+        s.accept()
+        while s.is_surface_connected:
+            time.sleep(CONNECTION_CHECK_DELAY)
+        s.cleanup()
+
+
+def _handle_arduino(a: Arduino):
+    """
+    TODO: Document
+    """
+    while True:
+        a.connect()
+        while a.connected:
+            time.sleep(CONNECTION_CHECK_DELAY)
+        a.disconnect()
+
 
 if __name__ == '__main__':
     dm = DataManager()
     server = Server(dm)
-    while True:
-        process = server.accept()
-        while server.is_surface_connected:
-            print("still alive...")
-            sleep(1)
-        server.cleanup()
+    threading.Thread(target=_handle_surface, args=(server,)).start()
+    for ard in server.arduinos:
+        threading.Thread(target=_handle_arduino, args=(ard,)).start()
