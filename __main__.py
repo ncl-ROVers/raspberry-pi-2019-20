@@ -21,11 +21,11 @@ def _handle_arduino(a: Arduino):
     """
     TODO: Document
     """
+    a.connect()
     while True:
-        a.connect()
         while a.connected:
             time.sleep(CONNECTION_CHECK_DELAY)
-        a.disconnect()
+        a.reconnect()
 
 
 if __name__ == '__main__':

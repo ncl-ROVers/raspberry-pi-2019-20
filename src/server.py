@@ -6,7 +6,8 @@ Module storing an implementation of a socket-based connection with the ROV.
 """
 import socket as _socket
 import json as _json
-import multiprocessing as _mp
+import multiprocess as _mp
+import threading as _threading
 import typing as _typing
 import serial as _serial
 from . import data_manager as _dm, Log as _Log
@@ -15,6 +16,9 @@ from .utils import Device as _Device, ARDUINO_PORTS as _ARDUINO_PORTS, \
 
 
 class Arduino:
+    """
+    TODO: Document
+    """
 
     def __init__(self, dm: _dm.DataManager, port: str):
         """
@@ -22,7 +26,7 @@ class Arduino:
         """
         self._dm = dm
         self._port = port
-        self._process = self._new_process()
+        self._thread = self._new_thread()
 
         # Setup the PySerial structure
         self._serial = _serial.Serial(baudrate=115200)
@@ -35,36 +39,43 @@ class Arduino:
         """
         TODO: Document
         """
-        return self._process.is_alive()
+        return self._thread.is_alive()
 
     def connect(self):
         """
         TODO: Document
         """
+        if self.connected:
+            _Log.error(f"Can't connect - already connected to {self._port}")
+            return
+
         _Log.info(f"Connecting to {self._port}...")
         while True:
             try:
-                self._serial.open()
-            except _serial.SerialException:
-                continue
-        self._process.start()
+                if not self._serial.is_open:
+                    self._serial.open()
+                    break
+            except _serial.SerialException as e:
+                _Log.debug(f"Failed to connect to {self._port} - {e}")
         _Log.info(f"Connected to {self._port}")
+        self._thread.start()
 
     def disconnect(self):
         """
         TODO: Document
         """
-        if not self.connected:
+        if not self._serial.is_open:
             _Log.error(f"Can't disconnect from {self._port} - not connected")
 
+        # Clean up the serial connection
         try:
-            self._serial.close()
+            if self._serial.is_open:
+                self._serial.close()
         except _serial.SerialException as e:
             _Log.error(f"Failed to close the connection with {self._port}")
 
-        if self._process.is_alive():
-            self._process.terminate()
-        self._process = self._new_process()
+        # Clean up the communication process
+        self._thread = self._new_thread()
 
     def reconnect(self):
         """
@@ -76,16 +87,22 @@ class Arduino:
     def _communicate(self):
         """
         TODO: Document
-        TODO: Write code for this + serialisation methods for each ID
+        TODO: Write serialisation methods for each ID (data handling)
         """
-        data = self._serial.read_until()
-        _Log.debug(f"Received data from {self._port} - {data}")
+        while True:
+            try:
+                data = self._serial.read_until()
+                _Log.info(f"Received data from {self._port} - {data}")
+                self._serial.write(bytes("hi\n\r", encoding="utf-8"))
+            except _serial.SerialException as e:
+                _Log.error(f"Lost connection to {self._port} - {e}")
+                break
 
-    def _new_process(self) -> _mp.Process:
+    def _new_thread(self) -> _threading.Thread:
         """
         TODO: Document
         """
-        return _mp.Process(target=self._communicate)
+        return _threading.Thread(target=self._communicate)
 
 
 class Server:
