@@ -37,6 +37,7 @@ class Device(_enum.Enum):
     """
     TODO: Document
     """
+    UNKNOWN = -1
     SURFACE = 0
     ARDUINO_A = 1
 

@@ -34,6 +34,9 @@ class Arduino:
         self._serial.write_timeout = _SERIAL_WRITE_TIMEOUT
         self._serial.timeout = _SERIAL_READ_TIMEOUT
 
+        # The device field will be used to determine how to parse the data
+        self._device = _Device.UNKNOWN
+
     @property
     def connected(self):
         """
@@ -77,6 +80,9 @@ class Arduino:
         # Clean up the communication process
         self._thread = self._new_thread()
 
+        # Forget the device id
+        self._device = _Device.UNKNOWN
+
     def reconnect(self):
         """
         TODO: Document
@@ -89,11 +95,37 @@ class Arduino:
         TODO: Document
         TODO: Write serialisation methods for each ID (data handling)
         """
+        # Pre-communication to determine the ID (listening only), ignore time-outs and invalid data
         while True:
             try:
-                data = self._serial.read_until()
-                _Log.info(f"Received data from {self._port} - {data}")
-                self._serial.write(bytes("hi\n\r", encoding="utf-8"))
+                data = self._serial.read_until().strip()
+                if not data:
+                    continue
+                else:
+                    self._device = _Device(int(data[0]))
+                    _Log.info(f"Detected a valid device at {self._port} - {self._device.name}")
+                    break
+            except _serial.SerialException as e:
+                _Log.error(f"Lost connection to {self._port} - {e}")
+                return
+            except ValueError as e:
+                _Log.error(f"Invalid device ID received from {self._port} - {e}")
+                return
+
+        while True:
+            try:
+                if data:
+                    _Log.debug(f"Received data from {self._port} - {data}")
+                    self._process_data(self._device, data)
+                else:
+                    _Log.debug(f"Timed out reading from {self._port}, clearing the buffer")
+                    self._serial.reset_output_buffer()
+
+                data = self._prepare_data(self._device)
+                _Log.debug(f"Writing data to {self._port} - {data}")
+                self._serial.write(data)
+
+                data = self._serial.read_until().strip()
             except _serial.SerialException as e:
                 _Log.error(f"Lost connection to {self._port} - {e}")
                 break
@@ -103,6 +135,46 @@ class Arduino:
         TODO: Document
         """
         return _threading.Thread(target=self._communicate)
+
+    def _process_data(self, ard: _Device, received_data: bytes):
+        """
+        TODO: Document
+        :param ard:
+        :param recv_data:
+        :return:
+        """
+        def _handle_arduino_a(data: bytes) -> dict:
+            """
+            TODO: Document as sample method
+            :param data:
+            :return:
+            """
+            data = data[1:]
+            return {"test": data}
+
+        dm_data = {
+            _Device.ARDUINO_A: _handle_arduino_a
+        }[ard](received_data)
+        self._dm.set(ard, **dm_data)
+
+    def _prepare_data(self, ard: _Device):
+        """
+        TODO: Document
+        :param ard:
+        :return:
+        """
+        def _handle_arduino_a(data: dict) -> bytes:
+            """
+            TODO: Document as sample method
+            :param data:
+            :return:
+            """
+            return b"".join([int(v).to_bytes(2, byteorder='big') for v in data.values()]) + b"\n"
+
+        dm_data = self._dm.get(ard)
+        return {
+            _Device.ARDUINO_A: _handle_arduino_a
+        }[ard](dm_data)
 
 
 class Server:
