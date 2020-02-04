@@ -4,7 +4,7 @@ Logger
 
 Module storing an implementation of a static log class and all values associated with it.
 
-The config.json files stored within the assets folder are used to configure most of the logging functionality.
+The config.json file stored within the assets folder is used to configure most of the logging functionality.
 """
 from .utils import LOG_DIR as _LOG_DIR
 import logging as _logging

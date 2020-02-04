@@ -1,5 +1,5 @@
 """
-Log-related tests.
+Data manager related tests.
 
 The tests are first reconfiguring the loggers to use the local assets folder instead of the production environment.
 """

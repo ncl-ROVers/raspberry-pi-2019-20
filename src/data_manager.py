@@ -10,14 +10,41 @@ from .logger import Log as _Log
 
 class DataManager:
     """
-    TODO: Document
+    Class representing a data manager which has access to internal per-device-dictionaries.
+
+    Provides getter and setter methods to each dictionary.
+
+    Functions
+    ---------
+
+    The following list shortly summarises each function:
+
+        * __init__ - a constructor to create the dictionaries and populate them with the default values
+        * get - a getter controlling access to the internal dictionaries
+        * set - a setter controlling access to the internal dictionaries
+        * _handle_data_from_surface - a helper method used to gradually modify some values
+
+    Usage
+    -----
+
+    You should import the module and create the data manager::
+
+        from .data_manager import DataManager
+        dm = DataManager()
+
+    To use it, you must pass a reference to the manager to other parts of the code::
+
+        def func(dm: DataManager):
+            dm.set(Device.SURFACE, test=5)
+            print(dm.get(Device.ARDUINO_A))
     """
 
     def __init__(self):
         """
         Standard constructor.
 
-        Creates a data dictionary for each device connected to the server.
+        Creates a data dictionary for each device connected to the server. The data represents values to send to the
+        device it is registered under.
         """
         self._surface = dict()
 
@@ -31,7 +58,9 @@ class DataManager:
         """
         Method used to access the cached values.
 
-        Returns selected data or full dictionary if no args passed.
+        Returns selected data or full dictionary if no args passed. The data is sent to a selected device in the server,
+        meaning that retrieving data for a specific device means retrieving the target values it should internally
+        store.
 
         :param device: Device to specify which device to retrieve the data from
         :param args: Keys to retrieve (returns all keys if no args are passed)
@@ -56,6 +85,9 @@ class DataManager:
 
         If the values are coming from surface, they are dispatched into separated dictionaries, specific to each
         Arduino. Otherwise, the values from the Arduino override specific values in surface transmission data.
+
+        Keep in mind that if the keys received are within the RAMP_KEYS constant, the values will not be changed to the
+        target values, but rather be modified by a small value multiple times.
 
         `set_default` argument is treated with a priority, and if set to True the data is replaced with default values
         immediately, ignoring kwargs and simply setting all values possible to default (surface only).

@@ -1,5 +1,8 @@
 """
-TODO: Document
+Utils
+=====
+
+Standard utils module storing common classes, functions, constants, and other objects.
 """
 import os as _os
 import enum as _enum
@@ -35,7 +38,9 @@ RAMP_KEYS = {
 
 class Device(_enum.Enum):
     """
-    TODO: Document
+    Device enumeration storing different device definitions.
+
+    A device must be a surface or arduino, or otherwise it is undefined (unknown) and has to be identified first.
     """
     UNKNOWN = -1
     SURFACE = 0

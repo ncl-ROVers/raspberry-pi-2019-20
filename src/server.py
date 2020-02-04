@@ -1,8 +1,9 @@
 """
-Connection
-==========
+Server
+======
 
-Module storing an implementation of a socket-based connection with the ROV.
+Module storing an implementation of a socket-based and serial-based server, to exchange data with surface and the
+Arduino-s.
 """
 import socket as _socket
 import json as _json
@@ -205,7 +206,7 @@ class Server:
         self._arduinos = {self._new_arduino(port) for port in _ARDUINO_PORTS}
 
     @property
-    def is_surface_connected(self) -> bool:
+    def surface_connected(self) -> bool:
         """
         TODO: Document
         """
