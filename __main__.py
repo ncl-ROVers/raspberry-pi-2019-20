@@ -34,7 +34,7 @@ def _handle_arduino(a: Arduino):
     """
     Helper function used to keep communicating with an Arduino.
 
-    :param s: Arduino's instance
+    :param a: Arduino's instance
     """
     a.connect()
     while True:
@@ -50,6 +50,6 @@ if __name__ == '__main__':
     server = Server(dm)
 
     # Create a thread for each communication channel - 1 for surface and multiple ones for arduino-s
-    threading.Thread(target=_handle_surface, args=(server,)).start()
+    threading.Thread(name="SURFACE", target=_handle_surface, args=(server,)).start()
     for ard in server.arduinos:
-        threading.Thread(target=_handle_arduino, args=(ard,)).start()
+        threading.Thread(name=str(ard) + str(ard._port), target=_handle_arduino, args=(ard,)).start()

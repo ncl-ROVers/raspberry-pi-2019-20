@@ -7,23 +7,63 @@ Arduino-s.
 """
 import socket as _socket
 import json as _json
-import multiprocess as _mp
 import threading as _threading
 import typing as _typing
 import serial as _serial
 from . import data_manager as _dm, Log as _Log
-from .utils import Device as _Device, ARDUINO_PORTS as _ARDUINO_PORTS, \
+from .utils import Device as _Device, ARDUINO_PORTS as _ARDUINO_PORTS, SERIAL_CHUNK_SIZE as _SERIAL_CHUNK_SIZE, \
     SERIAL_READ_TIMEOUT as _SERIAL_READ_TIMEOUT, SERIAL_WRITE_TIMEOUT as _SERIAL_WRITE_TIMEOUT
 
 
 class Arduino:
     """
-    TODO: Document
+    Arduino class used to handle serial communication between the ROV and an Arduino.
+
+    Functions
+    ---------
+
+    The following list shortly summarises each function:
+
+        * __init__ - a constructor to create and initialise serial and process related constructs
+        * connected - a getter to check if the communication is still happening
+        * connect - a method used to connect to Arduino
+        * disconnect - a method used to disconnect with the Arduino
+        * reconnect - a helper method used to disconnect and connect in one step
+        * _communicate - a private method which does the actual communication with the Arduino
+        * _new_thread - a private method which re-initialises the thread
+        * _process_data - a private method which processes data received from Arduino (dispatch)
+        * _prepare_data - a private method used to prepare the data to send to the Arduino
+
+    Usage
+    -----
+
+    The Arduino-s are created via server, and can be accessed in the following way::
+
+        arduinos = server.arduinos
+
+    While working, the code should check if the communication is happening, to detect when it stops::
+
+        if not arduino.connected():
+            arduino.reconnect()
+
+    .. warning::
+
+        The calling functions must handle when the attempts to connect, disconnect etc. should be made, and detect when
+        the communication stops (for example by checking the status). This is NOT handled internally.
+
+    .. note::
+
+        You should check __main__.py to see how the surface-rov and rov-arduino(s) connections are kept alive.
     """
 
     def __init__(self, dm: _dm.DataManager, port: str):
         """
-        TODO: Document
+        Standard constructor.
+
+        Initialises the socket and the processes, as well as create instances of Arduino.
+
+        :param dm: DataManager's instance to share the data correctly
+        :param port: Arduino port
         """
         self._dm = dm
         self._port = port
@@ -41,13 +81,19 @@ class Arduino:
     @property
     def connected(self):
         """
-        TODO: Document
+        Getter to check if the communication is happening.
         """
         return self._thread.is_alive()
 
     def connect(self):
         """
-        TODO: Document
+        Method used to connect to the Arduino and start exchanging the data.
+
+        The steps are as follows:
+
+            1. Open a serial connection (while loop to handle serial-related issues and make sure it opens correctly)
+            2. Start the communication thread
+
         """
         if self.connected:
             _Log.error(f"Can't connect - already connected to {self._port}")
@@ -66,7 +112,14 @@ class Arduino:
 
     def disconnect(self):
         """
-        TODO: Document
+        Method used to disconnect from the Arduino and stop exchanging the data.
+
+        The steps are as follows:
+
+            1. Close the serial connection
+            2. Re-initialise the thread
+            3. Forget the device's ID it was connected to
+
         """
         if not self._serial.is_open:
             _Log.error(f"Can't disconnect from {self._port} - not connected")
@@ -78,7 +131,7 @@ class Arduino:
         except _serial.SerialException as e:
             _Log.error(f"Failed to close the connection with {self._port}")
 
-        # Clean up the communication process
+        # Clean up the communication thread
         self._thread = self._new_thread()
 
         # Forget the device id
@@ -86,15 +139,21 @@ class Arduino:
 
     def reconnect(self):
         """
-        TODO: Document
+        Method used to reconnect to the Arduino (disconnect and connect).
         """
         self.disconnect()
         self.connect()
 
     def _communicate(self):
         """
-        TODO: Document
-        TODO: Write serialisation methods for each ID (data handling)
+        Function used to exchange the data with the Arduino.
+
+        Pre-communicates to retrieve the ID and set the device's ID, starts processing data immediately after.
+
+        Being a separate process, it is safe to let this function run in an infinite while loop, because to stop this
+        communication it is sufficient to stop (terminate) the process (OS-level interruption).
+
+        Breaks the infinite loops on errors, leaving the calling code to accommodate for them.
         """
         # Pre-communication to determine the ID (listening only), ignore time-outs and invalid data
         while True:
@@ -117,12 +176,12 @@ class Arduino:
             try:
                 if data:
                     _Log.debug(f"Received data from {self._port} - {data}")
-                    self._process_data(self._device, data)
+                    self._process_data(data)
                 else:
                     _Log.debug(f"Timed out reading from {self._port}, clearing the buffer")
                     self._serial.reset_output_buffer()
 
-                data = self._prepare_data(self._device)
+                data = self._prepare_data()
                 _Log.debug(f"Writing data to {self._port} - {data}")
                 self._serial.write(data)
 
@@ -133,59 +192,106 @@ class Arduino:
 
     def _new_thread(self) -> _threading.Thread:
         """
-        TODO: Document
+        Function used as a default communication thread generator.
+
+        :return: New, correctly configured Thread object
         """
         return _threading.Thread(target=self._communicate)
 
-    def _process_data(self, ard: _Device, received_data: bytes):
+    def _process_data(self, data: bytes):
         """
-        TODO: Document
-        :param ard:
-        :param recv_data:
-        :return:
+        Method used to deserialise and unpack the values into the surface dictionary.
+        TODO: Code proper dispatching functions
+
+        :param data: Received byte string
         """
-        def _handle_arduino_a(data: bytes) -> dict:
+        def _handle_arduino_a() -> dict:
             """
-            TODO: Document as sample method
-            :param data:
-            :return:
+            Sub-method used to handle data incoming from ARDUINO_A
+            TODO: Sample method
+
+            :return: dictionary of values to propagate to surface
             """
-            data = data[1:]
-            return {"test": data}
+            nonlocal values
+
+            return {
+                "test": values[0]
+            }
+
+        # Deserialise and split the data into chunks (ignore the device ID bytes)
+        values = [int.from_bytes(data[i: i + _SERIAL_CHUNK_SIZE], byteorder="big")
+                  for i in range(2, len(data), _SERIAL_CHUNK_SIZE)]
 
         dm_data = {
             _Device.ARDUINO_A: _handle_arduino_a
-        }[ard](received_data)
-        self._dm.set(ard, **dm_data)
+        }[self._device]()
+        self._dm.set(self._device, **dm_data)
 
-    def _prepare_data(self, ard: _Device):
+    def _prepare_data(self) -> bytes:
         """
-        TODO: Document
-        :param ard:
-        :return:
-        """
-        def _handle_arduino_a(data: dict) -> bytes:
-            """
-            TODO: Document as sample method
-            :param data:
-            :return:
-            """
-            return b"".join([int(v).to_bytes(2, byteorder='big') for v in data.values()]) + b"\n"
+        Method used to serialise the data into bytes. Each integer value is converted to a 2-byte big-endian byte
+        structure. The message is ended with a /n character.
 
-        dm_data = self._dm.get(ard)
-        return {
-            _Device.ARDUINO_A: _handle_arduino_a
-        }[ard](dm_data)
+        :return: Byte string
+        """
+        return b"".join([int(v).to_bytes(_SERIAL_CHUNK_SIZE, byteorder="big")
+                         for v in self._dm.get(self._device).values()]) + b"\n"
 
 
 class Server:
     """
-    TODO: Document
+    Server class used as a two-way data exchange medium (with both the surface and the Arduino-s).
+
+    Handles TCP-based transmission with surface and Serial-based transmission(s) with Arduino-s
+
+    Functions
+    ---------
+
+    The following list shortly summarises each function:
+
+        * __init__ - a constructor to create and initialise socket, serial and process related constructs
+        * surface_connected - a getter to check if the communication is still happening
+        * arduinos - a getter to retrieve the set of Arduino instances
+        * accept - a method used to accept connections from surface
+        * cleanup - a method used to (attempt to) clean-up the resources
+        * _communicate - a private method which does the actual communication with surface (recv and send)
+        * _new_socket - a private method which re-initialises the socket
+        * _new_thread - a private method which re-initialises the thread
+        * _new_arduino - a private method which creates a new Arduino
+
+    Usage
+    -----
+
+    The server should be created as follows (data manager required)::
+
+        dm = DataManager()
+        server = Server(dm)
+
+    While working, the code should check if the communication is happening, to detect when it stops::
+
+        if not server.surface_connected:
+            server.cleanup()
+            server.accept()
+
+    .. warning::
+
+        The calling functions must handle when the attempts to connect, disconnect etc. should be made, and detect when
+        the communication stops (for example by checking the status). This is NOT handled internally.
+
+    .. note::
+
+        You should check __main__.py to see how the surface-rov and rov-arduino(s) connections are kept alive.
     """
 
     def __init__(self, dm: _dm.DataManager, *, ip: str = "localhost", port: int = 50000):
         """
-        TODO: Document
+        Standard constructor.
+
+        Initialises the socket and the processes, as well as create instances of Arduino.
+
+        :param dm: DataManager's instance to share the data correctly
+        :param ip: Host ip
+        :param port: Host port
         """
         self._dm = dm
         self._ip = ip
@@ -196,7 +302,7 @@ class Server:
         self._socket = self._new_socket()
 
         # Initialise the process for sending and receiving the data
-        self._process = self._new_process()
+        self._thread = self._new_thread()
 
         # For hinting, declare some values
         self._client_socket: _typing.Union[None, _socket.socket] = None
@@ -208,20 +314,22 @@ class Server:
     @property
     def surface_connected(self) -> bool:
         """
-        TODO: Document
+        Helper getter used to check if the communication with surface is still happening.
         """
-        return self._process.is_alive()
+        return self._thread.is_alive()
 
     @property
     def arduinos(self) -> _typing.Set[Arduino]:
         """
-        TODO: Document
+        Getter for the set of Arduino-s.
         """
         return self._arduinos
 
     def accept(self):
         """
-        TODO: Document
+        Method used to accept incoming connections from surface.
+
+        On errors, the cleanup function is called.
         """
         try:
             _Log.info(f"{self._socket.getsockname()} is waiting for a client connection...")
@@ -231,7 +339,7 @@ class Server:
 
             # Once the client is connected, start the data exchange process
             _Log.info(f"Client with address {self._client_address} connected")
-            self._process.start()
+            self._thread.start()
 
         except (ConnectionError, OSError) as e:
             _Log.error(f"Failed to listen to incoming connections - {e}")
@@ -239,13 +347,21 @@ class Server:
 
     def cleanup(self, ignore_errors: bool = False):
         """
-        TODO: Document
+        Method used to cleanup the connection and the communication process.
+
+        The steps are as follows:
+
+            1. Set the default values and send them to connected Arduino-s
+            2. Create a new thread
+            3. Shutdown and close the client socket
+
+        Errors can be optionally ignored with the `ignore_errors` flag.
+
+        :param ignore_errors: Boolean determining whether the errors should be propagated or not
         """
         try:
             self._dm.set(_Device.SURFACE, set_default=True)
-            if self._process.is_alive():
-                self._process.terminate()
-            self._process = self._new_process()
+            self._thread = self._new_thread()
             self._client_socket.shutdown(_socket.SHUT_RDWR)
             self._client_socket.close()
         except (ConnectionError, OSError) as e:
@@ -256,7 +372,12 @@ class Server:
 
     def _communicate(self):
         """
-        TODO: Document
+        Function used to exchange the data with surface.
+
+        Being a separate process, it is safe to let this function run in an infinite while loop, because to stop this
+        communication it is sufficient to stop (terminate) the process (OS-level interruption).
+
+        Breaks the infinite loop on errors, leaving the calling code to accommodate for that.
         """
         while True:
             try:
@@ -278,8 +399,9 @@ class Server:
                     self._dm.set(_Device.SURFACE, **data)
 
                 # Encode the transmission data as JSON and send the bytes to the server
-                _Log.debug("Sending data to surface")
-                self._client_socket.sendall(bytes(_json.dumps(self._dm.get(_Device.SURFACE)), encoding="utf-8"))
+                data = self._dm.get(_Device.SURFACE)
+                _Log.debug(f"Sending data to surface - {data}")
+                self._client_socket.sendall(bytes(_json.dumps(data), encoding="utf-8"))
 
             except (ConnectionError, OSError) as e:
                 _Log.error(f"An error occurred while communicating with the client - {e}")
@@ -287,26 +409,32 @@ class Server:
 
     def _new_socket(self) -> _socket.socket:
         """
-        TODO: Document
+        Function used as a default socket generator.
+
+        :return: New, correctly configured socket object
         """
         socket = _socket.socket()
 
         try:
             socket.bind(self._address)
         except _socket.error:
-            print("Failed to bind socket to the given address {}:{} ".format(self._ip, self._port))
+            _Log.error("Failed to bind socket to the given address {}:{} ".format(self._ip, self._port))
 
         socket.listen(1)
         return socket
 
-    def _new_process(self) -> _mp.Process:
+    def _new_thread(self) -> _threading.Thread:
         """
-        TODO: Document
+        Function used as a default communication thread generator.
+
+        :return: New, correctly configured Thread object
         """
-        return _mp.Process(target=self._communicate)
+        return _threading.Thread(target=self._communicate)
 
     def _new_arduino(self, port: str) -> Arduino:
         """
-        TODO: Document
+        Function used as a default Arduino instance generator.
+
+        :return: New, correctly configured Arduino instance
         """
         return Arduino(self._dm, port)
