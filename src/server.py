@@ -283,7 +283,7 @@ class Server:
         You should check __main__.py to see how the surface-rov and rov-arduino(s) connections are kept alive.
     """
 
-    def __init__(self, dm: _dm.DataManager, *, ip: str = "localhost", port: int = 50000):
+    def __init__(self, dm: _dm.DataManager, *, ip: str = "0.0.0.0", port: int = 50000):
         """
         Standard constructor.
 

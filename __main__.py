@@ -12,6 +12,10 @@ To run the code, call::
 where `python` is Python3.8.1 version and `raspberry-pi` is relative or absolute path to the directory in which this
 file is.
 """
+import sys
+import os
+sys.path.append(os.path.dirname(__file__))
+
 from src import *
 import threading
 import time

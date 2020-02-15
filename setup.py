@@ -26,7 +26,8 @@ DIRS = [
 ]
 FILES = [
     os.path.join(ROOT, "LICENSE"),
-    os.path.join(ROOT, "README.md")
+    os.path.join(ROOT, "README.md"),
+    os.path.join(ROOT, ".autostart")
 ]
 
 
