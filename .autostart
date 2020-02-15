@@ -1,0 +1,1 @@
+sudo python3.8 -m ncl_rovers &
