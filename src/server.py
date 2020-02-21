@@ -11,7 +11,7 @@ import threading as _threading
 import typing as _typing
 import serial as _serial
 from . import data_manager as _dm, Log as _Log
-from .utils import Device as _Device, ARDUINO_PORTS as _ARDUINO_PORTS, SERIAL_CHUNK_SIZE as _SERIAL_CHUNK_SIZE, \
+from .utils import Device as _Device, ARDUINO_PORTS as _ARDUINO_PORTS, \
     SERIAL_READ_TIMEOUT as _SERIAL_READ_TIMEOUT, SERIAL_WRITE_TIMEOUT as _SERIAL_WRITE_TIMEOUT
 
 
@@ -31,8 +31,6 @@ class Arduino:
         * reconnect - a helper method used to disconnect and connect in one step
         * _communicate - a private method which does the actual communication with the Arduino
         * _new_thread - a private method which re-initialises the thread
-        * _process_data - a private method which processes data received from Arduino (dispatch)
-        * _prepare_data - a private method used to prepare the data to send to the Arduino
 
     Usage
     -----
@@ -162,9 +160,14 @@ class Arduino:
                 if not data:
                     continue
                 else:
-                    self._device = _Device(int(data[0]))
-                    _Log.info(f"Detected a valid device at {self._port} - {self._device.name}")
-                    break
+                    try:
+                        self._device = _Device(_json.loads(data.decode("utf-8"))["id"])
+                        _Log.info(f"Detected a valid device at {self._port} - {self._device.name}")
+                        break
+                    except (UnicodeError, _json.JSONDecodeError, KeyError, ValueError) as e:
+                        _Log.error(f"Failed to decode (and assign device id) following data: {data} - {e}")
+                        return
+
             except _serial.SerialException as e:
                 _Log.error(f"Lost connection to {self._port} - {e}")
                 return
@@ -176,12 +179,26 @@ class Arduino:
             try:
                 if data:
                     _Log.debug(f"Received data from {self._port} - {data}")
-                    self._process_data(data)
+
+                    try:
+                        data = _json.loads(data.decode("utf-8").strip())
+
+                        # Remove ID from the data to avoid setting it upstream, disconnect in case of errors
+                        if "id" not in data or data["id"] != self._device.value:
+                            _Log.error(f"ID key not in {data} or key doesn't match {self._device.value}")
+                            break
+                        else:
+                            del data["id"]
+
+                        self._dm.set(self._device, **data)
+                    except (UnicodeError, _json.JSONDecodeError) as e:
+                        _Log.warning(f"Failed to decode following data: {data} - {e}")
+
                 else:
                     _Log.debug(f"Timed out reading from {self._port}, clearing the buffer")
                     self._serial.reset_output_buffer()
 
-                data = self._prepare_data()
+                data = bytes(_json.dumps(self._dm.get(self._device)) + "\n", encoding="utf-8")
                 _Log.debug(f"Writing data to {self._port} - {data}")
                 self._serial.write(data)
 
@@ -197,45 +214,6 @@ class Arduino:
         :return: New, correctly configured Thread object
         """
         return _threading.Thread(target=self._communicate)
-
-    def _process_data(self, data: bytes):
-        """
-        Method used to deserialise and unpack the values into the surface dictionary.
-        TODO: Code proper dispatching functions
-
-        :param data: Received byte string
-        """
-        def _handle_arduino_a() -> dict:
-            """
-            Sub-method used to handle data incoming from ARDUINO_A
-            TODO: Sample method
-
-            :return: dictionary of values to propagate to surface
-            """
-            nonlocal values
-
-            return {
-                "test": values[0]
-            }
-
-        # Deserialise and split the data into chunks (ignore the device ID bytes)
-        values = [int.from_bytes(data[i: i + _SERIAL_CHUNK_SIZE], byteorder="big")
-                  for i in range(2, len(data), _SERIAL_CHUNK_SIZE)]
-
-        dm_data = {
-            _Device.ARDUINO_A: _handle_arduino_a
-        }[self._device]()
-        self._dm.set(self._device, **dm_data)
-
-    def _prepare_data(self) -> bytes:
-        """
-        Method used to serialise the data into bytes. Each integer value is converted to a 2-byte big-endian byte
-        structure. The message is ended with a /n character.
-
-        :return: Byte string
-        """
-        return b"".join([int(v).to_bytes(_SERIAL_CHUNK_SIZE, byteorder="big")
-                         for v in self._dm.get(self._device).values()]) + b"\n"
 
 
 class Server:
@@ -392,7 +370,7 @@ class Server:
                 try:
                     data = _json.loads(data.decode("utf-8").strip())
                 except (UnicodeError, _json.JSONDecodeError) as e:
-                    _Log.debug(f"Failed to decode following data: {data} - {e}")
+                    _Log.warning(f"Failed to decode following data: {data} - {e}")
 
                 # Only handle valid, non-empty data
                 if data and isinstance(data, dict):

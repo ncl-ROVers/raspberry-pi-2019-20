@@ -18,7 +18,6 @@ TESTS_ASSETS_DIR = _os.path.join(TESTS_DIR, "assets")
 ARDUINO_PORTS = {"/dev/ttyACM0", "/dev/ttyACM1", "/dev/ttyACM2", "COM5"}
 SERIAL_WRITE_TIMEOUT = 1
 SERIAL_READ_TIMEOUT = 1
-SERIAL_CHUNK_SIZE = 2
 
 # Declare the constant to determine how often should the connections be checked
 CONNECTION_CHECK_DELAY = 1
