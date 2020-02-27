@@ -29,14 +29,14 @@ def test_getting_default_values():
     Test that data is set to default values at first.
     """
     assert dm.get(Device.SURFACE) == DEFAULTS[Device.SURFACE]
-    assert dm.get(Device.ARDUINO_A) == DEFAULTS[Device.ARDUINO_A]
+    assert dm.get(Device.ARDUINO_O) == DEFAULTS[Device.ARDUINO_O]
 
 
 def test_getting_specific_values():
     """
     Test that specific parts of the data can be retrieved.
     """
-    assert dm.get(Device.ARDUINO_A, "T_HFP", "T_HFS") == {"T_HFP": 1500, "T_HFS": 1500}
+    assert dm.get(Device.ARDUINO_O, "T_HFP", "T_HFS") == {"T_HFP": 1500, "T_HFS": 1500}
 
 
 def test_setting_specific_values():
@@ -44,11 +44,11 @@ def test_setting_specific_values():
     Test that specific parts of the data can be modified.
     """
     dm.set(Device.SURFACE, T_HFP=0)
-    assert dm.get(Device.ARDUINO_A, "T_HFP") == {"T_HFP": 1500 - RAMP_RATE}
-    assert dm.get(Device.ARDUINO_A, "T_HFS") == {"T_HFS": 1500}
+    assert dm.get(Device.ARDUINO_O, "T_HFP") == {"T_HFP": 1500 - RAMP_RATE}
+    assert dm.get(Device.ARDUINO_O, "T_HFS") == {"T_HFS": 1500}
 
-    dm.set(Device.ARDUINO_A, test=10)
-    assert dm.get(Device.SURFACE) == {"test": 10}
+    dm.set(Device.ARDUINO_O, ARD_O=True)
+    assert dm.get(Device.SURFACE, "ARD_O") == {"ARD_O": True}
 
 
 def test_setting_default_values():
@@ -56,10 +56,10 @@ def test_setting_default_values():
     Setting the values to default should only work for surface.
     """
     dm.set(Device.SURFACE, set_default=True)
-    assert dm.get(Device.ARDUINO_A, "T_HFP") == {"T_HFP": 1500}
-    dm.set(Device.ARDUINO_A, set_default=True)
+    assert dm.get(Device.ARDUINO_O, "T_HFP") == {"T_HFP": 1500}
+    dm.set(Device.ARDUINO_O, set_default=True)
     with open(os.path.join(TESTS_ASSETS_DIR, "error.log")) as f:
-        assert "Setting the default values is only supported for surface, not ARDUINO_A" in f.read()
+        assert "Setting the default values is only supported for surface, not ARDUINO_O" in f.read()
 
 
 @pytest.fixture(scope="module", autouse=True)

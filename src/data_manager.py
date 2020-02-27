@@ -36,7 +36,7 @@ class DataManager:
 
         def func(dm: DataManager):
             dm.set(Device.SURFACE, test=5)
-            print(dm.get(Device.ARDUINO_A))
+            print(dm.get(Device.ARDUINO_O))
     """
 
     def __init__(self):
@@ -51,7 +51,8 @@ class DataManager:
         # Create a dictionary mapping each index to a corresponding location
         self._data = {
             _Device.SURFACE: _DEFAULTS[_Device.SURFACE].copy(),
-            _Device.ARDUINO_A: _DEFAULTS[_Device.ARDUINO_A].copy()
+            _Device.ARDUINO_O: _DEFAULTS[_Device.ARDUINO_O].copy(),
+            _Device.ARDUINO_I: _DEFAULTS[_Device.ARDUINO_I].copy()
         }
 
     def get(self, device: _Device, *args) -> dict:
@@ -105,11 +106,14 @@ class DataManager:
 
             # Override each Arduino dictionary with the defaults
             if set_default:
-                self._data[_Device.ARDUINO_A] = _DEFAULTS[_Device.ARDUINO_A]
+                self._data[_Device.ARDUINO_O] = _DEFAULTS[_Device.ARDUINO_O]
+                self._data[_Device.ARDUINO_I] = _DEFAULTS[_Device.ARDUINO_I]
 
             for k, v in kwargs.items():
-                if k in self._data[_Device.ARDUINO_A]:
-                    self._handle_data_from_surface(_Device.ARDUINO_A, k, v)
+                if k in self._data[_Device.ARDUINO_O]:
+                    self._handle_data_from_surface(_Device.ARDUINO_O, k, v)
+                elif k in self._data[_Device.ARDUINO_I]:
+                    self._handle_data_from_surface(_Device.ARDUINO_I, k, v)
                 else:
                     raise KeyError(f"Couldn't find {k} key in any of the Arduino dictionaries")
 
@@ -141,4 +145,4 @@ class DataManager:
                 self._data[device][key] += _RAMP_RATE
 
         else:
-            self._data[_Device.ARDUINO_A][key] = value
+            self._data[device][key] = value

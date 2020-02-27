@@ -32,7 +32,8 @@ RAMP_KEYS = {
     "T_VFP",
     "T_VFS",
     "T_VAP",
-    "T_VAS"
+    "T_VAS",
+    "T_M"
 }
 
 
@@ -42,18 +43,22 @@ class Device(_enum.Enum):
 
     A device must be a surface or arduino, or otherwise it is undefined (unknown) and has to be identified first.
     """
-    UNKNOWN = -1
-    SURFACE = 0
-    ARDUINO_A = 1
+    UNKNOWN = "UNKNOWN_DEVICE"
+    SURFACE = "SURFACE"
+    ARDUINO_O = "ARD_O"
+    ARDUINO_I = "ARD_I"
 
 
 # Declare the transmission sets with the default values as initial values
 THRUSTER_IDLE = 1500
+GRIPPER_IDLE = 1500
+CORD_IDLE = 1500
 DEFAULTS = {
     Device.SURFACE: {
-        "test": 0,
+        "ARD_O": False,
+        "ARD_I": False
     },
-    Device.ARDUINO_A: {
+    Device.ARDUINO_O: {
         "T_HFP": THRUSTER_IDLE,
         "T_HFS": THRUSTER_IDLE,
         "T_HAP": THRUSTER_IDLE,
@@ -61,6 +66,10 @@ DEFAULTS = {
         "T_VFP": THRUSTER_IDLE,
         "T_VFS": THRUSTER_IDLE,
         "T_VAP": THRUSTER_IDLE,
-        "T_VAS": THRUSTER_IDLE
-    }
+        "T_VAS": THRUSTER_IDLE,
+        "T_M": THRUSTER_IDLE,
+        "MG": GRIPPER_IDLE,
+        "MC": CORD_IDLE
+    },
+    Device.ARDUINO_I: {}
 }

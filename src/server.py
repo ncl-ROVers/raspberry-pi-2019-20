@@ -132,6 +132,10 @@ class Arduino:
         # Clean up the communication thread
         self._thread = self._new_thread()
 
+        # Set the connection status to disconnected, if the id was known
+        if self._device != _Device.UNKNOWN:
+            self._dm.set(self._device, **{self._device.value: False})
+
         # Forget the device id
         self._device = _Device.UNKNOWN
 
@@ -163,6 +167,9 @@ class Arduino:
                     try:
                         self._device = _Device(_json.loads(data.decode("utf-8"))["id"])
                         _Log.info(f"Detected a valid device at {self._port} - {self._device.name}")
+
+                        # Knowing the id, set the connection status to connected (True)
+                        self._dm.set(self._device, **{self._device.value: True})
                         break
                     except (UnicodeError, _json.JSONDecodeError, KeyError, ValueError) as e:
                         _Log.error(f"Failed to decode (and assign device id) following data: {data} - {e}")
