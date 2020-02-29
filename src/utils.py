@@ -45,8 +45,8 @@ class Device(_enum.Enum):
     """
     UNKNOWN = "UNKNOWN_DEVICE"
     SURFACE = "SURFACE"
-    ARDUINO_O = "ARD_O"
-    ARDUINO_I = "ARD_I"
+    ARDUINO_O = "A_O"
+    ARDUINO_I = "A_I"
 
 
 # Declare the transmission sets with the default values as initial values
@@ -55,8 +55,8 @@ GRIPPER_IDLE = 1500
 CORD_IDLE = 1500
 DEFAULTS = {
     Device.SURFACE: {
-        "ARD_O": False,
-        "ARD_I": False
+        "A_O": False,
+        "A_I": False
     },
     Device.ARDUINO_O: {
         "T_HFP": THRUSTER_IDLE,
@@ -68,8 +68,8 @@ DEFAULTS = {
         "T_VAP": THRUSTER_IDLE,
         "T_VAS": THRUSTER_IDLE,
         "T_M": THRUSTER_IDLE,
-        "MG": GRIPPER_IDLE,
-        "MC": CORD_IDLE
+        "M_G": GRIPPER_IDLE,
+        "M_C": CORD_IDLE
     },
     Device.ARDUINO_I: {}
 }
