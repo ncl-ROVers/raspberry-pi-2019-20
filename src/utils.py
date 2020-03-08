@@ -56,7 +56,9 @@ CORD_IDLE = 1500
 DEFAULTS = {
     Device.SURFACE: {
         "A_O": False,
-        "A_I": False
+        "A_I": False,
+        "S_O": 0,
+        "S_I": 0
     },
     Device.ARDUINO_O: {
         "T_HFP": THRUSTER_IDLE,
