@@ -165,7 +165,7 @@ class Arduino:
                     continue
                 else:
                     try:
-                        self._device = _Device(_json.loads(data.decode("utf-8"))["id"])
+                        self._device = _Device(_json.loads(data.decode("utf-8"))["ID"])
                         _Log.info(f"Detected a valid device at {self._port} - {self._device.name}")
 
                         # Knowing the id, set the connection status to connected (True)
@@ -191,11 +191,11 @@ class Arduino:
                         data = _json.loads(data.decode("utf-8").strip())
 
                         # Remove ID from the data to avoid setting it upstream, disconnect in case of errors
-                        if "id" not in data or data["id"] != self._device.value:
+                        if "ID" not in data or data["ID"] != self._device.value:
                             _Log.error(f"ID key not in {data} or key doesn't match {self._device.value}")
                             break
                         else:
-                            del data["id"]
+                            del data["ID"]
 
                         self._dm.set(self._device, **data)
                     except (UnicodeError, _json.JSONDecodeError) as e:
